@@ -20,12 +20,13 @@ This system automates participant registration, image handling, and table printi
 
 | Component | Technology |
 |------------|-------------|
-| **Language** | Java (JDK 24) |
+| **Programming Language** | Java (JDK 24) |
 | **IDE** | Apache NetBeans 27 |
 | **Database** | Microsoft Access (.accdb) |
-| **Driver** | UCanAccess |
-| **GUI** | Java Swing |
-| **Print API** | JTable Print Method |
+| **Connectivity Driver** | UCanAccess JDBC |
+| **GUI Toolkit** | Java Swing |
+| **Build Tool** | Maven |
+| **File Handling** | Java I/O & NIO (Files.copy) |
 
 ---
 
@@ -33,26 +34,16 @@ This system automates participant registration, image handling, and table printi
 
 ExhibitionRegistration/
 │
-
-└── src/
-
-└── main/
-
-└── java/
-
-└── vu/
-
-└── ExhibitionRegn/
-
-├── ExhibitionSystem.java # Main JFrame Form
-
-├── VUE_Exhibition.accdb # Access Database
-
-├── images/ # Uploaded Participant Images
-
-├── DBConnection.java # UCanAccess Database Connection
-
-├── README.md # Project Documentation
+	└── src/
+		└── main/
+			└── java/
+				└── vu/
+					└── ExhibitionRegn/
+						├── ExhibitionSystem.java # Main JFrame Form
+						├── VUE_Exhibition.accdb # Access Database					
+						├── images/ # Uploaded Participant Images	
+						├── DBConnection.java # UCanAccess Database Connection
+						├── README.md # Project Documentation
 
 
 ---
@@ -71,17 +62,108 @@ In **DBConnection.java**, set your database connection as:
 
 String url = "jdbc:ucanaccess://C:/Users/Dell/Documents/NetBeansProjects/ExhibitionRegistration/src/main/java/vu/ExhibitionRegn/VUE_Exhibition.accdb";
 
-💡 Ensure that the slashes / are forward slashes in Java file paths.
+	Ensure that the slashes / are forward slashes in Java file paths.
+
+### 🔹 JDBC Connection URL
+In Java, connection URLs for UCanAccess take this format:
+
+String url = "jdbc:ucanaccess://<absolute_path_to_database>";
+
+For this project:
+String url = "jdbc:ucanaccess://C:/Users/Dell/Documents/NetBeansProjects/ExhibitionRegistration/src/main/java/vu/ExhibitionRegn/VUE_Exhibition.accdb";
+
 
 ### 3️⃣ Adding Libraries in NetBeans
 
-Right-click the project → Properties
+### Option 1: Manual Dependency Setup (Classic Method)
 
-Go to Libraries
+If you’re not using Maven, follow these steps:
+
+Required Libraries:
+
+ucanaccess.jar
+
+jackcess.jar
+
+commons-lang.jar
+
+commons-logging.jar
+
+hsqldb.jar
+
+	All of these JARs must be in your project’s classpath for the connection to work.
+
+#### Steps to Add in Apache NetBeans (JDK 24)
+
+Right-click your Project > Properties
+
+Go to Libraries > Compile Tab
 
 Click Add JAR/Folder
 
-Select all UCanAccess driver files (ucanaccess.jar, jackcess.jar, etc.)
+Select all the above .jar files
+
+Press OK and Clean & Build your project
+
+	If correctly added, NetBeans will list them under Libraries in your project tree.
+
+You can verify successful linkage by checking:
+
+Database connected successfully!
+
+in the NetBeans console when running.
+
+### Option 2: Maven Dependency Management (Recommended)
+
+If your project uses Maven, you don’t need to manually download or add .jar files. Maven automatically downloads all libraries and their transitive dependencies from the central repository.
+
+#### Step 1: Convert Project to Maven
+
+In NetBeans:
+
+Right-click project → Convert to Maven Project
+
+#### Step 2: Add UCanAccess to pom.xml
+
+Insert the following <dependencies> section:
+
+<dependencies>
+    <!-- UCanAccess Core Driver -->
+	<dependency>
+		<groupId>net.sf.ucanaccess</groupId>
+		<artifactId>ucanaccess</artifactId>
+		<version>5.0.1</version>
+	</dependency>
+    
+    <!-- Additional optional dependencies -->
+    <dependency>
+        <groupId>commons-lang</groupId>
+        <artifactId>commons-lang</artifactId>
+        <version>2.6</version>
+    </dependency>
+
+    <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>1.2</version>
+    </dependency>
+
+    <dependency>
+        <groupId>hsqldb</groupId>
+        <artifactId>hsqldb</artifactId>
+        <version>2.5.1</version>
+    </dependency>
+</dependencies>
+
+#### Step 3: Build the Project
+
+After saving, NetBeans automatically downloads the libraries.
+
+Go to:
+
+Project > Dependencies
+
+	You’ll now see all JARs resolved automatically.
 
 ### 4️⃣ Run the Program
 
