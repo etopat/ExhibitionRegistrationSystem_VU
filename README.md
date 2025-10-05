@@ -33,15 +33,25 @@ This system automates participant registration, image handling, and table printi
 
 ExhibitionRegistration/
 │
+
 └── src/
+
 └── main/
+
 └── java/
+
 └── vu/
+
 └── ExhibitionRegn/
+
 ├── ExhibitionSystem.java # Main JFrame Form
+
 ├── VUE_Exhibition.accdb # Access Database
+
 ├── images/ # Uploaded Participant Images
+
 ├── DBConnection.java # UCanAccess Database Connection
+
 ├── README.md # Project Documentation
 
 
