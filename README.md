@@ -195,15 +195,23 @@ Participants Table	Displays all records with print and refresh options
 6️⃣ Use Print to output table to printer
 
 ### Screenshots (Add Later)
-Interface	Description
+### Interface	Description
+
+### Registration Form
 
 ![Registration Form](Screenshots/Registration-Form.png)
 
+### Participants Table Tab
+
 ![Participants Table](Screenshots/Data-table-tab.png)
+
+### Successful Registration Popup
 
 ![Successful Registration Popup](Screenshots/Successful-Registration.png)
 
-![No Record Found Popup](Screenshots/no-record-found.png)
+### No Record Found Popup
+
+![No Record Found Popup](Screenshots/No-record-found.png)
 
 ### Input Validation
 Field	Validation
