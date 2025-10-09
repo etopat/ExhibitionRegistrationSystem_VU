@@ -96,6 +96,7 @@ Table: participants
 | imagePath	| VARCHAR(255)	| File path to participant’s ID image |
 
 Sample Data:
+
 	sql
 
 	INSERT INTO participants (regID, fullName, department, partner, contact, email, imagePath)
@@ -141,6 +142,7 @@ Run ExhibitionRegn.java as the main entry point.
 ## Setup & Configuration
 
 ### 1️ Prerequisites
+
 Install:
 - Java JDK 24+
 - Apache NetBeans 27
@@ -148,6 +150,7 @@ Install:
 - UCanAccess Driver (ucanaccess.jar, jackcess.jar, commons-lang.jar, etc.)
 
 ### 2️ Database Path Setup
+
 In **DBConnection.java**, set your database connection as:
 
 	String url = "jdbc:ucanaccess://C:/Users/Dell/Documents/NetBeansProjects/ExhibitionRegistration/src/main/java/vu/ExhibitionRegn/VUE_Exhibition.accdb";
@@ -280,14 +283,15 @@ Participants Table	Displays all records with print and refresh options
 6️⃣ Use Print to output table to printer
 
 # Sample Login Credentials
+
 | Username	| Password	| Role |
 |--------|--------|----------|
-| admin	| admin123	| Administrator |
-| organizer	| vu2025	| Organizer |
+| admin	| 12345	| Administrator |
+| Patrick | 1234 | Administrator |
+| Hope	| 1234	| Guest |
+| Salim | 1234 | Lecturer |
 
-### Screenshots (Add Later)
-
-### Interface	Description
+### Screenshots
 
 ### Login Screen
 
@@ -348,12 +352,13 @@ Participants Table	Displays all records with print and refresh options
 
 
 ### Input Validation
-Field	Validation
-Registration ID	Must be unique (e.g., REG001)
-Name	Cannot be empty
-Email	Checked with regex pattern
-Contact	Numeric only
-Image	Required before submission
+| Field | Validation |
+|-------|---------|
+| Registration | ID	Must be unique (e.g., REG001) |
+| Name |	Cannot be empty |
+| Email |	Checked with regex pattern |
+| Contact |	Numeric only |
+| Image |	Required before submission |
 
 ### Printing Feature
 Print the full participant list directly from the table:
@@ -375,11 +380,11 @@ Switch from Access to MySQL
 ### Authors
 | # | NAME	| REG. NUMBER |
 |------|-----------|----------|
-| 1. ETOMET PATRICK | VU-BBC-2411-1019-DAY |
-| 2. ISAAC VICTOR  | VU-DIT-2411-1595-DAY |
-| 3. WALIGO SALIM | VU-DIT-2411-0215-DAy |
-| 4. NAMATOVU HOPE | VU-DIT-2411-0047-DAY |
-| 5. TUKEI MARK | VU-BIT-2411-0565-DAY |
+| 1. | ETOMET PATRICK | VU-BBC-2411-1019-DAY |
+| 2. | ISAAC VICTOR  | VU-DIT-2411-1595-DAY |
+| 3. | WALIGO SALIM | VU-DIT-2411-0215-DAy |
+| 4. | NAMATOVU HOPE | VU-DIT-2411-0047-DAY |
+| 5. | TUKEI MARK | VU-BIT-2411-0565-DAY |
 
 Victoria University – Faculty of Computing
 
