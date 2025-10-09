@@ -218,28 +218,28 @@ Right-click project → Convert to Maven Project
 
 Insert the following <dependencies> section:
 
-<dependencies>
-    <!-- UCanAccess Core Driver -->
-	<dependency>
-		<groupId>net.sf.ucanaccess</groupId>
-		<artifactId>ucanaccess</artifactId>
-		<version>5.0.1</version>
-	</dependency>
-    
-    <!-- Additional optional dependencies -->
-    <dependency>
-        <groupId>commons-lang</groupId>
-        <artifactId>commons-lang</artifactId>
-        <version>2.6</version>
-    </dependency>
-
-    <dependency>
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-        <version>1.2</version>
-    </dependency>
+	<dependencies>
+	    <!-- UCanAccess Core Driver -->
+		<dependency>
+			<groupId>net.sf.ucanaccess</groupId>
+			<artifactId>ucanaccess</artifactId>
+			<version>5.0.1</version>
+		</dependency>
+	    
+	    <!-- Additional optional dependencies -->
+	    <dependency>
+	        <groupId>commons-lang</groupId>
+	        <artifactId>commons-lang</artifactId>
+	        <version>2.6</version>
+	    </dependency>
 	
-	<dependency>
+	    <dependency>
+	        <groupId>commons-logging</groupId>
+	        <artifactId>commons-logging</artifactId>
+	        <version>1.2</version>
+	    </dependency>
+		
+		<dependency>
         <groupId>org.hsqldb</groupId>
         <artifactId>hsqldb</artifactId>
         <version>2.7.2</version>
