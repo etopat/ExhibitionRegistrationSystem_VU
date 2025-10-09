@@ -36,25 +36,25 @@ This system automates participant registration, image handling, and table printi
 
 ## Project Directory Structure
 
-ExhibitionRegistration/
-│
-	└── src/
+	ExhibitionRegistration/
+		│
+		└── src/
 	
-		└── main/
-		
-			└── java/
+			└── main/
 			
-				└── vu/
+				└── java/
 				
-					└── ExhibitionRegn/
+					└── vu/
 					
-						├── ExhibitionSystem.java # Main JFrame Form
+						└── ExhibitionRegn/
 						
-						├── VUE_Exhibition.accdb # Access Database	
-						
-						├── images/ # Uploaded Participant Images
-												
-						├── README.md # Project Documentation
+							├── ExhibitionSystem.java # Main JFrame Form
+							
+							├── VUE_Exhibition.accdb # Access Database	
+							
+							├── images/ # Uploaded Participant Images
+													
+							├── README.md # Project Documentation
 
 
 
@@ -75,7 +75,8 @@ The system requires two main tables:
 | role | VARCHAR(20) | Optional (e.g., “admin”, “organizer”) |
 
 **Sample Data:**
-	sql
+
+`	sql
 	
 	INSERT INTO users (username, password, role)
 	VALUES
@@ -97,7 +98,7 @@ Table: participants
 
 Sample Data:
 
-	sql
+`	sql
 
 	INSERT INTO participants (regID, fullName, department, partner, contact, email, imagePath)
 	VALUES
