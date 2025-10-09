@@ -22,97 +22,93 @@ import javax.swing.filechooser.FileNameExtensionFilter;
  */
 public class ExhibitionRegn extends javax.swing.JFrame {
     
-    // JDBC variables
+     // =================== GLOBAL VARIABLES =====================
     private static final String DB_URL = "jdbc:ucanaccess://"
             + "C:\\Users\\Dell\\Documents\\NetBeansProjects\\ExhibitionRegistration\\"
             + "src\\main\\java\\vu\\ExhibitionRegn\\VUE_Exhibition.accdb";
     private Connection conn;
-    
+    private String loggedUser;
+    private String role;
 
-    // Image path
     private String selectedImagePath = null;
-    
-    /**
-     * Creates new form ExhibitionRegn
-     */
-    public ExhibitionRegn() {
+    private static final String IMAGE_DIR = "src/main/java/vu/ExhibitionRegn/images/";
+
+    // =================== CONSTRUCTOR ==========================
+    public ExhibitionRegn(String username, String userRole) {
+        this.loggedUser = username;
+        this.role = userRole;
+
         initComponents();
         connectDatabase();
         loadParticipantsData();
+
+        setTitle("Exhibition Registration System - Logged in as: " + username + " (" + userRole + ")");
+        
     }
     
-     // Database connection
+     // =================== DATABASE CONNECTION =====================
     private void connectDatabase() {
         try {
             conn = DriverManager.getConnection(DB_URL);
-            JOptionPane.showMessageDialog(this, "Database Connected!");
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "DB Connection Error: " + e.getMessage());
         }
     }
     
-    // Register Participant
-    // ===== Corrected Register Participant =====
+    // =================== REGISTER PARTICIPANT =====================
     private void registerParticipant() {
-    try {
-        if (txtRegID.getText().isEmpty() || txtName.getText().isEmpty() ||
-            txtDept.getText().isEmpty() || txtPartner.getText().isEmpty() ||
-            txtContact.getText().isEmpty() || txtEmail.getText().isEmpty() ||
-            selectedImagePath == null) {
-            JOptionPane.showMessageDialog(this, "All fields including image are required!");
-            return;
+        try {
+            if (txtRegID.getText().isEmpty() || txtName.getText().isEmpty() ||
+                txtDept.getText().isEmpty() || txtPartner.getText().isEmpty() ||
+                txtContact.getText().isEmpty() || txtEmail.getText().isEmpty() ||
+                selectedImagePath == null) {
+                JOptionPane.showMessageDialog(this, "All fields including image are required!");
+                return;
+            }
+
+            String regID = txtRegID.getText().trim();
+            String checkSql = "SELECT COUNT(*) FROM Participants WHERE RegistrationID = ?";
+            PreparedStatement checkPs = conn.prepareStatement(checkSql);
+            checkPs.setString(1, regID);
+            ResultSet rs = checkPs.executeQuery();
+
+            if (rs.next() && rs.getInt(1) > 0) {
+                JOptionPane.showMessageDialog(this, 
+                    "Participant with Registration ID. " + regID + " already exists!");
+                return;
+            }
+
+            File srcFile = new File(selectedImagePath);
+            String ext = "";
+            int i = srcFile.getName().lastIndexOf('.');
+            if (i > 0) ext = srcFile.getName().substring(i);
+
+            File destDir = new File(IMAGE_DIR);
+            if (!destDir.exists()) destDir.mkdirs();
+
+            File destFile = new File(destDir, regID + ext);
+            Files.copy(srcFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+            String sql = "INSERT INTO Participants (RegistrationID, ParticipantName, Department, DancePartner, ContactNumber, Email, IDImagePath) "
+                       + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, regID);
+            ps.setString(2, txtName.getText());
+            ps.setString(3, txtDept.getText());
+            ps.setString(4, txtPartner.getText());
+            ps.setString(5, txtContact.getText());
+            ps.setString(6, txtEmail.getText());
+            ps.setString(7, destFile.getPath());
+            ps.executeUpdate();
+
+            JOptionPane.showMessageDialog(this, "Participant Registered Successfully!");
+            clearForm();
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Registration Error: " + e.getMessage());
         }
-
-        String regID = txtRegID.getText().trim();
-
-        // Check if participant already exists
-        String checkSql = "SELECT COUNT(*) FROM Participants WHERE RegistrationID = ?";
-        PreparedStatement checkPs = conn.prepareStatement(checkSql);
-        checkPs.setString(1, regID);
-        ResultSet rs = checkPs.executeQuery();
-
-        if (rs.next() && rs.getInt(1) > 0) {
-            JOptionPane.showMessageDialog(this, 
-                "Participant with Registration ID. " + regID + " is already registered!");
-            return;
-        }
-
-        // Rename image to RegistrationID only (keep extension)
-        File srcFile = new File(selectedImagePath);
-        String ext = "";
-        int i = srcFile.getName().lastIndexOf('.');
-        if (i > 0) {
-            ext = srcFile.getName().substring(i);
-        }
-
-        // Save image to images folder
-        File destDir = new File("src/main/java/vu/exhibitionRegn/images");
-        if (!destDir.exists()) destDir.mkdirs();
-        File destFile = new File(destDir, regID + ext);
-        Files.copy(srcFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-        // Insert new participant
-        String sql = "INSERT INTO Participants (RegistrationID, ParticipantName, Department, DancePartner, ContactNumber, Email, IDImagePath) "
-                   + "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        PreparedStatement ps = conn.prepareStatement(sql);
-        ps.setString(1, regID);
-        ps.setString(2, txtName.getText());
-        ps.setString(3, txtDept.getText());
-        ps.setString(4, txtPartner.getText());
-        ps.setString(5, txtContact.getText());
-        ps.setString(6, txtEmail.getText());
-        ps.setString(7, destFile.getPath());
-
-        ps.executeUpdate();
-        JOptionPane.showMessageDialog(this, "Participant Registered Successfully!");
-        clearForm();
-
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Registration Error: " + e.getMessage());
+        loadParticipantsData();
     }
-
-    loadParticipantsData();
-}
 
 
     // Search Participant
@@ -144,110 +140,90 @@ public class ExhibitionRegn extends javax.swing.JFrame {
         }
     }
 
-    //=============== Update Participant Section ======================
-    // Image directory
-    private static final String IMAGE_DIR = "src/main/java/vu/ExhibitionRegn/images/";
-    
-    // Save uploaded image as <regId>.<ext>, return absolute path (or null on failure)
+    // =================== UPDATE PARTICIPANT =====================
     private String saveImageAsRegId(String regId, String sourcePath) throws IOException {
         if (sourcePath == null || sourcePath.trim().isEmpty()) return null;
         File src = new File(sourcePath);
         if (!src.exists()) return null;
 
-        // ensure dir exists
         File dir = new File(IMAGE_DIR);
         if (!dir.exists()) dir.mkdirs();
 
-        // get extension
         String ext = "";
-        String name = src.getName();
-        int i = name.lastIndexOf('.');
-        if (i > 0) ext = name.substring(i); // includes dot
+        int i = src.getName().lastIndexOf('.');
+        if (i > 0) ext = src.getName().substring(i);
 
         File dest = new File(dir, regId + ext);
         Files.copy(src.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
         return dest.getAbsolutePath();
     }
 
-    //Logic to handle update of partcipant data.
     private void updateParticipant() {
-        String regId = txtRegID.getText().trim();
-        if (regId.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Enter Registration ID to update.", 
-                    "Validation", JOptionPane.WARNING_MESSAGE);
+    try {
+        String regID = txtRegID.getText().trim();
+        if (regID.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please enter a Registration ID to update!");
             return;
         }
 
-        // Basic field validation 
-        if (txtName.getText().trim().isEmpty() || txtDept.getText().trim().isEmpty()
-                || txtContact.getText().trim().isEmpty() || txtEmail.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please fill required fields (Name, Department, Contact, "
-                    + "Email).", "Validation", JOptionPane.WARNING_MESSAGE);
+        // Check if participant exists
+        String checkSql = "SELECT * FROM Participants WHERE RegistrationID = ?";
+        PreparedStatement checkPs = conn.prepareStatement(checkSql);
+        checkPs.setString(1, regID);
+        ResultSet rs = checkPs.executeQuery();
+
+        if (!rs.next()) {
+            JOptionPane.showMessageDialog(this, "No participant found with Reg No: " + regID);
             return;
         }
 
-        try {
-            // 1) fetch existing image path from DB (if any)
-            String existingImagePath = null;
-            String fetchSql = "SELECT IDImagePath FROM Participants WHERE RegistrationID = ?";
-            try (PreparedStatement psFetch = conn.prepareStatement(fetchSql)) {
-                psFetch.setString(1, regId);
-                try (ResultSet rs = psFetch.executeQuery()) {
-                    if (rs.next()) existingImagePath = rs.getString("IDImagePath");
-                    else {
-                        JOptionPane.showMessageDialog(this, "No record found for Registration ID: " + 
-                                regId, "Not Found", JOptionPane.WARNING_MESSAGE);
-                        return;
-                    }
-                }
-            }
+        // Handle image update (if a new one is selected)
+        String relativeImagePath = rs.getString("IDImagePath"); // keep old one if not changed
+        if (selectedImagePath != null) {
+            File srcFile = new File(selectedImagePath);
+            String ext = "";
 
-            // 2) If a new image was uploaded (selectedImagePath != null), save it and delete old image
-            String finalImagePath = existingImagePath; // default keep old
-            if (selectedImagePath != null && !selectedImagePath.trim().isEmpty()) {
-                String saved = saveImageAsRegId(regId, selectedImagePath); // may throw IOException
-                if (saved != null && !saved.isEmpty()) {
-                    finalImagePath = saved;
-                    // delete old file if different
-                    if (existingImagePath != null && !existingImagePath.isEmpty() && 
-                            !existingImagePath.equals(finalImagePath)) {
-                        File old = new File(existingImagePath);
-                        if (old.exists()) old.delete();
-                    }
-                }
-            }
+            int i = srcFile.getName().lastIndexOf('.');
+            if (i > 0) ext = srcFile.getName().substring(i);
 
-            // 3) perform update with correct parameter order
-            String updateSql = "UPDATE Participants SET ParticipantName=?, Department=?, "
-                    + "DancePartner=?, ContactNumber=?, Email=?, IDImagePath=? WHERE RegistrationID=?";
-            try (PreparedStatement pst = conn.prepareStatement(updateSql)) {
-                pst.setString(1, txtName.getText().trim());
-                pst.setString(2, txtDept.getText().trim());
-                pst.setString(3, txtPartner.getText().trim());
-                pst.setString(4, txtContact.getText().trim());
-                pst.setString(5, txtEmail.getText().trim());
-                // set image path (may be null)
-                if (finalImagePath == null) pst.setNull(6, Types.VARCHAR);
-                else pst.setString(6, finalImagePath);
-                pst.setString(7, regId);
+            // Define relative folder path
+            String relativeFolder = "src\\main\\java\\vu\\exhibitionRegn\\images";
+            File destDir = new File(relativeFolder);
+            if (!destDir.exists()) destDir.mkdirs();
 
-                int affected = pst.executeUpdate();
-                if (affected > 0) {
-                    selectedImagePath = finalImagePath; // keep UI state consistent
-                    JOptionPane.showMessageDialog(this, "Record updated successfully.");
-                } else {
-                    JOptionPane.showMessageDialog(this, "Update failed. No record updated.", "Update Error", 
-                            JOptionPane.ERROR_MESSAGE);
-                }
-            }
+            // Copy and rename image file to match regID
+            File destFile = new File(destDir, regID + ext);
+            Files.copy(srcFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-        } catch (SQLException sqle) {
-            JOptionPane.showMessageDialog(this, "DB error during update: " + sqle.getMessage(), "DB Error", 
-                    JOptionPane.ERROR_MESSAGE);
+            // Store only the relative path in the database
+            relativeImagePath = relativeFolder + "\\" + regID + ext;
+        }
 
-        } catch (IOException ioe) {
-            JOptionPane.showMessageDialog(this, "File error saving image: " + ioe.getMessage(), "File Error", 
-                    JOptionPane.ERROR_MESSAGE);
+        // Update query
+        String updateSql = "UPDATE Participants SET ParticipantName=?, Department=?, DancePartner=?, "
+                + "ContactNumber=?, Email=?, IDImagePath=? WHERE RegistrationID=?";
+        PreparedStatement ps = conn.prepareStatement(updateSql);
+
+        ps.setString(1, txtName.getText());
+        ps.setString(2, txtDept.getText());
+        ps.setString(3, txtPartner.getText());
+        ps.setString(4, txtContact.getText());
+        ps.setString(5, txtEmail.getText());
+        ps.setString(6, relativeImagePath);
+        ps.setString(7, regID);
+
+        int rows = ps.executeUpdate();
+
+        if (rows > 0) {
+            JOptionPane.showMessageDialog(this, "Participant details updated successfully!");
+            clearForm();
+            loadParticipantsData();
+        } else {
+            JOptionPane.showMessageDialog(this, "Update failed. Please try again.");
+        }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Update Error: " + e.getMessage());
         }
         loadParticipantsData();
     }
@@ -323,37 +299,35 @@ public class ExhibitionRegn extends javax.swing.JFrame {
     }
     
     // Load participants into JTable
-private void loadParticipantsData() {
-    try {
-        String sql = "SELECT RegistrationID, ParticipantName, Department, DancePartner, ContactNumber, Email FROM Participants";
-        PreparedStatement ps = conn.prepareStatement(sql);
-        ResultSet rs = ps.executeQuery();
+    private void loadParticipantsData() {
+        try {
+            String sql = "SELECT RegistrationID, ParticipantName, Department, DancePartner, ContactNumber, Email FROM Participants";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
 
-        // Get metadata for column headers
-        ResultSetMetaData meta = rs.getMetaData();
-        int columnCount = meta.getColumnCount();
+            // Get metadata for column headers
+            ResultSetMetaData meta = rs.getMetaData();
+            int columnCount = meta.getColumnCount();
 
-        // Build table model
-        javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel();
-        for (int i = 1; i <= columnCount; i++) {
-            model.addColumn(meta.getColumnName(i));
-        }
-
-        while (rs.next()) {
-            Object[] row = new Object[columnCount];
+            // Build table model
+            javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel();
             for (int i = 1; i <= columnCount; i++) {
-                row[i - 1] = rs.getObject(i);
+                model.addColumn(meta.getColumnName(i));
             }
-            model.addRow(row);
+
+            while (rs.next()) {
+                Object[] row = new Object[columnCount];
+                for (int i = 1; i <= columnCount; i++) {
+                    row[i - 1] = rs.getObject(i);
+                }
+                model.addRow(row);
+            }
+            tblParticipants.setModel(model);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error loading participants: " + e.getMessage());
         }
-        tblParticipants.setModel(model);
-
-    } catch (SQLException e) {
-        JOptionPane.showMessageDialog(this, "Error loading participants: " + e.getMessage());
     }
-}
-
-    
 
 
     /**
@@ -384,16 +358,18 @@ private void loadParticipantsData() {
         jPanel2 = new javax.swing.JPanel();
         btnSearch = new javax.swing.JButton();
         btnRegister = new javax.swing.JButton();
-        btnDelete = new javax.swing.JButton();
         btnUpdate = new javax.swing.JButton();
         btnExit = new javax.swing.JButton();
         btnClear = new javax.swing.JButton();
+        btnDelete = new javax.swing.JButton();
         jLabel1 = new javax.swing.JLabel();
+        btnLogout2 = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
         jPanel4 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         tblParticipants = new javax.swing.JTable();
         jLabel2 = new javax.swing.JLabel();
+        btnLogout = new javax.swing.JButton();
         btnPrint = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -402,6 +378,7 @@ private void loadParticipantsData() {
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jTabbedPane1.setForeground(new java.awt.Color(71, 40, 22));
+        jTabbedPane1.setToolTipText("");
         jTabbedPane1.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
 
         jPanel1.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(173, 160, 127), 2, true));
@@ -413,6 +390,7 @@ private void loadParticipantsData() {
         jPanel1.add(lbl1, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 50, 120, -1));
 
         txtRegID.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        txtRegID.setToolTipText("Enter Participant's ID.");
         txtRegID.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 txtRegIDActionPerformed(evt);
@@ -425,6 +403,7 @@ private void loadParticipantsData() {
         jPanel1.add(lbl2, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 90, 120, -1));
 
         txtName.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        txtName.setToolTipText("Enter Particpant's Name.");
         jPanel1.add(txtName, new org.netbeans.lib.awtextra.AbsoluteConstraints(160, 90, 280, -1));
 
         lbl3.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
@@ -432,6 +411,7 @@ private void loadParticipantsData() {
         jPanel1.add(lbl3, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 130, 120, -1));
 
         txtDept.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        txtDept.setToolTipText("Enter Department.");
         jPanel1.add(txtDept, new org.netbeans.lib.awtextra.AbsoluteConstraints(160, 130, 280, -1));
 
         lbl4.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
@@ -439,6 +419,7 @@ private void loadParticipantsData() {
         jPanel1.add(lbl4, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 170, 120, -1));
 
         txtPartner.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        txtPartner.setToolTipText("Enter Dance Partner.");
         jPanel1.add(txtPartner, new org.netbeans.lib.awtextra.AbsoluteConstraints(160, 170, 280, -1));
 
         lbl5.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
@@ -446,6 +427,7 @@ private void loadParticipantsData() {
         jPanel1.add(lbl5, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 210, 120, -1));
 
         txtContact.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        txtContact.setToolTipText("Enter Contact Number.");
         jPanel1.add(txtContact, new org.netbeans.lib.awtextra.AbsoluteConstraints(160, 210, 280, -1));
 
         lbl6.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
@@ -453,22 +435,26 @@ private void loadParticipantsData() {
         jPanel1.add(lbl6, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 250, 120, -1));
 
         txtEmail.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        txtEmail.setToolTipText("Enter Email Address.");
         jPanel1.add(txtEmail, new org.netbeans.lib.awtextra.AbsoluteConstraints(160, 250, 280, -1));
 
+        lblImage.setLabelFor(btnUpload);
+        lblImage.setToolTipText("Participant's Photo");
         lblImage.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
-        jPanel1.add(lblImage, new org.netbeans.lib.awtextra.AbsoluteConstraints(460, 50, 190, 180));
+        jPanel1.add(lblImage, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 50, 170, 190));
 
         btnUpload.setBackground(new java.awt.Color(211, 222, 218));
         btnUpload.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         btnUpload.setForeground(new java.awt.Color(255, 255, 255));
         btnUpload.setText("Upload Image");
+        btnUpload.setToolTipText("Browse to upload Image");
         btnUpload.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.LOWERED, new java.awt.Color(153, 153, 153), new java.awt.Color(204, 204, 204), new java.awt.Color(102, 102, 102), new java.awt.Color(204, 204, 204)));
         btnUpload.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnUploadActionPerformed(evt);
             }
         });
-        jPanel1.add(btnUpload, new org.netbeans.lib.awtextra.AbsoluteConstraints(460, 240, 190, 30));
+        jPanel1.add(btnUpload, new org.netbeans.lib.awtextra.AbsoluteConstraints(460, 250, 190, 30));
 
         jPanel2.setBackground(new java.awt.Color(230, 235, 233));
         jPanel2.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -477,6 +463,7 @@ private void loadParticipantsData() {
         btnSearch.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         btnSearch.setForeground(new java.awt.Color(255, 255, 255));
         btnSearch.setText("Search");
+        btnSearch.setToolTipText("Search Participant.");
         btnSearch.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.LOWERED, new java.awt.Color(153, 153, 153), new java.awt.Color(204, 204, 204), new java.awt.Color(102, 102, 102), new java.awt.Color(204, 204, 204)));
         btnSearch.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -489,6 +476,7 @@ private void loadParticipantsData() {
         btnRegister.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         btnRegister.setForeground(new java.awt.Color(255, 255, 255));
         btnRegister.setText("Register");
+        btnRegister.setToolTipText("Register Participant.");
         btnRegister.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.LOWERED, new java.awt.Color(153, 153, 153), new java.awt.Color(204, 204, 204), new java.awt.Color(102, 102, 102), new java.awt.Color(204, 204, 204)));
         btnRegister.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -497,22 +485,11 @@ private void loadParticipantsData() {
         });
         jPanel2.add(btnRegister, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 90, 30));
 
-        btnDelete.setBackground(new java.awt.Color(245, 142, 142));
-        btnDelete.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
-        btnDelete.setForeground(new java.awt.Color(255, 255, 255));
-        btnDelete.setText("Delete");
-        btnDelete.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.LOWERED, new java.awt.Color(153, 153, 153), new java.awt.Color(204, 204, 204), new java.awt.Color(102, 102, 102), new java.awt.Color(204, 204, 204)));
-        btnDelete.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnDeleteActionPerformed(evt);
-            }
-        });
-        jPanel2.add(btnDelete, new org.netbeans.lib.awtextra.AbsoluteConstraints(340, 10, 90, 30));
-
         btnUpdate.setBackground(new java.awt.Color(182, 194, 190));
         btnUpdate.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         btnUpdate.setForeground(new java.awt.Color(255, 255, 255));
         btnUpdate.setText("Update");
+        btnUpdate.setToolTipText("Update Record!");
         btnUpdate.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.LOWERED, new java.awt.Color(153, 153, 153), new java.awt.Color(204, 204, 204), new java.awt.Color(102, 102, 102), new java.awt.Color(204, 204, 204)));
         btnUpdate.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -525,6 +502,7 @@ private void loadParticipantsData() {
         btnExit.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         btnExit.setForeground(new java.awt.Color(255, 255, 255));
         btnExit.setText("Exit");
+        btnExit.setToolTipText("Exit form.");
         btnExit.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.LOWERED, new java.awt.Color(153, 153, 153), new java.awt.Color(204, 204, 204), new java.awt.Color(102, 102, 102), new java.awt.Color(204, 204, 204)));
         btnExit.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -537,13 +515,27 @@ private void loadParticipantsData() {
         btnClear.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         btnClear.setForeground(new java.awt.Color(255, 255, 255));
         btnClear.setText("Clear");
+        btnClear.setToolTipText("Clear Fields!");
         btnClear.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.LOWERED, new java.awt.Color(153, 153, 153), new java.awt.Color(204, 204, 204), new java.awt.Color(102, 102, 102), new java.awt.Color(204, 204, 204)));
         btnClear.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnClearActionPerformed(evt);
             }
         });
-        jPanel2.add(btnClear, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 10, 90, 30));
+        jPanel2.add(btnClear, new org.netbeans.lib.awtextra.AbsoluteConstraints(340, 10, 90, 30));
+
+        btnDelete.setBackground(new java.awt.Color(245, 142, 142));
+        btnDelete.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        btnDelete.setForeground(new java.awt.Color(255, 255, 255));
+        btnDelete.setText("Delete");
+        btnDelete.setToolTipText("Delete Record!");
+        btnDelete.setBorder(new javax.swing.border.SoftBevelBorder(javax.swing.border.BevelBorder.LOWERED, new java.awt.Color(153, 153, 153), new java.awt.Color(204, 204, 204), new java.awt.Color(102, 102, 102), new java.awt.Color(204, 204, 204)));
+        btnDelete.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnDeleteActionPerformed(evt);
+            }
+        });
+        jPanel2.add(btnDelete, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 10, 90, 30));
 
         jPanel1.add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 290, 660, 50));
 
@@ -551,6 +543,18 @@ private void loadParticipantsData() {
         jLabel1.setForeground(new java.awt.Color(34, 40, 54));
         jLabel1.setText("SALSA Festival Participants Registration Form");
         jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 10, 480, -1));
+
+        btnLogout2.setBackground(new java.awt.Color(214, 104, 83));
+        btnLogout2.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
+        btnLogout2.setForeground(new java.awt.Color(255, 204, 204));
+        btnLogout2.setText("Logout");
+        btnLogout2.setToolTipText("Logout!");
+        btnLogout2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLogout2ActionPerformed(evt);
+            }
+        });
+        jPanel1.add(btnLogout2, new org.netbeans.lib.awtextra.AbsoluteConstraints(590, 10, 80, -1));
 
         jTabbedPane1.addTab("Register Participant", jPanel1);
 
@@ -589,13 +593,29 @@ private void loadParticipantsData() {
         jLabel2.setText("SALSA FESTIVAL REGISTERED PARTICIPANTS DATA");
         jPanel4.add(jLabel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 10, -1, -1));
 
+        btnLogout.setBackground(new java.awt.Color(214, 104, 83));
+        btnLogout.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
+        btnLogout.setForeground(new java.awt.Color(255, 204, 204));
+        btnLogout.setText("Logout");
+        btnLogout.setToolTipText("Logout!");
+        btnLogout.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLogoutActionPerformed(evt);
+            }
+        });
+        jPanel4.add(btnLogout, new org.netbeans.lib.awtextra.AbsoluteConstraints(593, 10, 80, -1));
+
+        btnPrint.setBackground(javax.swing.UIManager.getDefaults().getColor("Actions.Blue"));
+        btnPrint.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
+        btnPrint.setForeground(new java.awt.Color(255, 255, 255));
         btnPrint.setText("Print Report");
+        btnPrint.setToolTipText("Print Participants' Data.");
         btnPrint.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnPrintActionPerformed(evt);
             }
         });
-        jPanel4.add(btnPrint, new org.netbeans.lib.awtextra.AbsoluteConstraints(520, 10, -1, -1));
+        jPanel4.add(btnPrint, new org.netbeans.lib.awtextra.AbsoluteConstraints(480, 10, -1, -1));
 
         jPanel3.add(jPanel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 680, 340));
 
@@ -607,29 +627,18 @@ private void loadParticipantsData() {
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
-    private void txtRegIDActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtRegIDActionPerformed
-        // Form event Listener added by mistake text field Registration ID!
-    }//GEN-LAST:event_txtRegIDActionPerformed
-
-    private void btnUploadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUploadActionPerformed
-        uploadImage();        // Opens file chooser to choose file to upload.
-    }//GEN-LAST:event_btnUploadActionPerformed
-
-    private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchActionPerformed
-        searchParticipant();        // Searches the Participants recods based on entered Registration Number.
-    }//GEN-LAST:event_btnSearchActionPerformed
-
-    private void btnRegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRegisterActionPerformed
-        registerParticipant();        // Register New Participant.
-    }//GEN-LAST:event_btnRegisterActionPerformed
-
-    private void btnUpdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUpdateActionPerformed
-        updateParticipant();        // Updates participants records.
-    }//GEN-LAST:event_btnUpdateActionPerformed
-
-    private void btnDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeleteActionPerformed
-        deleteParticipant();        // Deletes Participant Record.
-    }//GEN-LAST:event_btnDeleteActionPerformed
+    private void btnLogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogoutActionPerformed
+        int choice = JOptionPane.showConfirmDialog(
+        this,
+        "Are you sure you want to logout?",
+        "Logout Confirmation",
+        JOptionPane.YES_NO_OPTION
+    );
+    if (choice == JOptionPane.YES_OPTION) {
+        dispose();
+        new LoginForm().setVisible(true);
+        }
+    }//GEN-LAST:event_btnLogoutActionPerformed
 
     private void btnClearActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnClearActionPerformed
         clearForm();        // Handles form clearing.
@@ -639,42 +648,170 @@ private void loadParticipantsData() {
         System.exit(0);        // Handles Closing the Window.
     }//GEN-LAST:event_btnExitActionPerformed
 
+    private void btnUpdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUpdateActionPerformed
+        updateParticipant();        // Updates participants records.
+    }//GEN-LAST:event_btnUpdateActionPerformed
+
+    private void btnDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeleteActionPerformed
+        deleteParticipant();        // Deletes Participant Record.
+    }//GEN-LAST:event_btnDeleteActionPerformed
+
+    private void btnRegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRegisterActionPerformed
+        registerParticipant();        // Register New Participant.
+    }//GEN-LAST:event_btnRegisterActionPerformed
+
+    private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchActionPerformed
+        searchParticipant();        // Searches the Participants recods based on entered Registration Number.
+    }//GEN-LAST:event_btnSearchActionPerformed
+
+    private void btnUploadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUploadActionPerformed
+        uploadImage();        // Opens file chooser to choose file to upload.
+    }//GEN-LAST:event_btnUploadActionPerformed
+
+    private void txtRegIDActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtRegIDActionPerformed
+        // Form event Listener added by mistake text field Registration ID!
+    }//GEN-LAST:event_txtRegIDActionPerformed
+
     private void btnPrintActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPrintActionPerformed
         try {
-        boolean complete = tblParticipants.print(
-                JTable.PrintMode.FIT_WIDTH, 
-                new java.text.MessageFormat("SALSA Festival Participants Report"), 
-                new java.text.MessageFormat("Page {0}")
-        );
+        boolean complete = tblParticipants.print();
         if (complete) {
             JOptionPane.showMessageDialog(this, "Printing Complete!");
         } else {
-            JOptionPane.showMessageDialog(this, "Printing Cancelled.");
+            JOptionPane.showMessageDialog(this, "Printing Canceled!");
         }
-        } catch (java.awt.print.PrinterException pe) {
-            JOptionPane.showMessageDialog(this, "Printing Error: " + pe.getMessage());
-        }
-
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Print Error: " + e.getMessage());
+    } // TODO add your handling code here:
     }//GEN-LAST:event_btnPrintActionPerformed
+
+    private void btnLogout2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogout2ActionPerformed
+        int choice = JOptionPane.showConfirmDialog(
+        this,
+        "Are you sure you want to logout?",
+        "Logout Confirmation",
+        JOptionPane.YES_NO_OPTION
+    );
+    if (choice == JOptionPane.YES_OPTION) {
+        dispose();
+        new LoginForm().setVisible(true);        // TODO add your handling code here:
+        }
+    }//GEN-LAST:event_btnLogout2ActionPerformed
 
     /**
      * @param args the command line arguments
      */
-   public static void main(String args[]) {
-    /* Create and display the form */
-    java.awt.EventQueue.invokeLater(new Runnable() {
-        @Override
-        public void run() {
-            new ExhibitionRegn().setVisible(true);
+   // =================== MAIN METHOD =====================
+    public static void main(String args[]) {
+        SwingUtilities.invokeLater(() -> new LoginForm().setVisible(true));
+    }
+    
+    // =================== LOGIN FORM INNER CLASS =====================
+    static class LoginForm extends JFrame {
+        JTextField txtUser;
+        JPasswordField txtPass;
+        JButton btnLogin, btnExit;
+
+        public LoginForm() {
+        setTitle("Login - Exhibition Registration System");
+        setSize(400, 200);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        // Use GridBagLayout for better alignment
+        setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 30, 10, 30); // top, left, bottom, right padding
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Username Label
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.LINE_END;
+        add(new JLabel("Username:"), gbc);
+
+        // Username Field
+        txtUser = new JTextField(15);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.anchor = GridBagConstraints.LINE_START;
+        add(txtUser, gbc);
+
+        // Password Label
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 0.3;
+        gbc.anchor = GridBagConstraints.LINE_END;
+        add(new JLabel("Password:"), gbc);
+
+        // Password Field
+        txtPass = new JPasswordField(15);
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        gbc.anchor = GridBagConstraints.LINE_START;
+        add(txtPass, gbc);
+
+        // Buttons Panel
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 0));
+
+        btnLogin = new JButton("Login");
+        btnExit = new JButton("Exit");
+        buttonPanel.add(btnLogin);
+        buttonPanel.add(btnExit);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        add(buttonPanel, gbc);
+
+        // Add actions
+        btnExit.addActionListener(e -> System.exit(0));
+        btnLogin.addActionListener(e -> authenticate());
+
+        setVisible(true);
+    }
+
+        private void authenticate() {
+            String username = txtUser.getText().trim();
+            String password = new String(txtPass.getPassword());
+
+            if (username.isEmpty() || password.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Enter username and password!");
+                return;
+            }
+
+            try (Connection conn = DriverManager.getConnection(ExhibitionRegn.DB_URL)) {
+                String sql = "SELECT * FROM Users WHERE Username=? AND Password=?";
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ps.setString(1, username);
+                ps.setString(2, password);
+                ResultSet rs = ps.executeQuery();
+
+                if (rs.next()) {
+                    String role = rs.getString("Role");
+                    JOptionPane.showMessageDialog(this, "Welcome " + username + " (" + role + ")");
+                    dispose();
+                    new ExhibitionRegn(username, role).setVisible(true);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Invalid Credentials!");
+                }
+
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(this, "DB Error: " + e.getMessage());
+            }
         }
-    });
-}
+    }
+
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnClear;
     private javax.swing.JButton btnDelete;
     private javax.swing.JButton btnExit;
+    private javax.swing.JButton btnLogout;
+    private javax.swing.JButton btnLogout2;
     private javax.swing.JButton btnPrint;
     private javax.swing.JButton btnRegister;
     private javax.swing.JButton btnSearch;
