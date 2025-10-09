@@ -63,8 +63,8 @@ ExhibitionRegistration/
 ## Database Design
 
 The system requires two main tables:  
-1️⃣ `users` – for login authentication  
-2️⃣ `participants` – for storing exhibition participant details  
+1️. `users` – for login authentication  
+2️. `participants` – for storing exhibition participant details  
 
 ### Table: `users`
 | Column Name | Data Type | Description |
@@ -75,13 +75,14 @@ The system requires two main tables:
 | role | VARCHAR(20) | Optional (e.g., “admin”, “organizer”) |
 
 **Sample Data:**
-` `sql`
-INSERT INTO users (username, password, role)
-VALUES
-('admin', '12345', 'Administrator'),
-('Patrick', '1234', 'Administrator'),
-('Salim', '1234', 'Lecturer'),
-('Hope', '1234', 'Guest'); `
+	sql
+	
+	INSERT INTO users (username, password, role)
+	VALUES
+	('admin', '12345', 'Administrator'),
+	('Patrick', '1234', 'Administrator'),
+	('Salim', '1234', 'Lecturer'),
+	('Hope', '1234', 'Guest');
 
 Table: participants
 | Column Name	| Data Type	| Description |
@@ -95,11 +96,12 @@ Table: participants
 | imagePath	| VARCHAR(255)	| File path to participant’s ID image |
 
 Sample Data:
-` `sql`
-INSERT INTO participants (regID, fullName, department, partner, contact, email, imagePath)
-VALUES
-('REG001', 'Mike Okello', 'HS', 'Joy', '94802470927', 'mike@example.com', 'src\main\java\vu\exhibitionRegn\images\REG001.png'),
-('REG002', 'John', 'IT', 'N/A', '099876554', 'john@gmail.com', 'src\main\java\vu\exhibitionRegn\images\REG002.png');`
+	sql
+
+	INSERT INTO participants (regID, fullName, department, partner, contact, email, imagePath)
+	VALUES
+	('REG001', 'Mike Okello', 'HS', 'Joy', '94802470927', 'mike@example.com', 'src\main\java\vu\exhibitionRegn\images\REG001.png'),
+	('REG002', 'John', 'IT', 'N/A', '099876554', 'john@gmail.com', 'src\main\java\vu\exhibitionRegn\images\REG002.png');
 
 ## How It Works
 
@@ -148,7 +150,7 @@ Install:
 ### 2️ Database Path Setup
 In **DBConnection.java**, set your database connection as:
 
-String url = "jdbc:ucanaccess://C:/Users/Dell/Documents/NetBeansProjects/ExhibitionRegistration/src/main/java/vu/ExhibitionRegn/VUE_Exhibition.accdb";
+	String url = "jdbc:ucanaccess://C:/Users/Dell/Documents/NetBeansProjects/ExhibitionRegistration/src/main/java/vu/ExhibitionRegn/VUE_Exhibition.accdb";
 
 	Ensure that the slashes / are forward slashes in Java file paths.
 
@@ -158,7 +160,8 @@ In Java, connection URLs for UCanAccess take this format:
 String url = "jdbc:ucanaccess://<absolute_path_to_database>";
 
 For this project:
-String url = "jdbc:ucanaccess://C:/Users/Dell/Documents/NetBeansProjects/ExhibitionRegistration/src/main/java/vu/ExhibitionRegn/VUE_Exhibition.accdb";
+
+	String url = "jdbc:ucanaccess://C:/Users/Dell/Documents/NetBeansProjects/ExhibitionRegistration/src/main/java/vu/ExhibitionRegn/VUE_Exhibition.accdb";
 
 
 ### 3️ Adding Libraries in NetBeans
@@ -283,6 +286,7 @@ Participants Table	Displays all records with print and refresh options
 | organizer	| vu2025	| Organizer |
 
 ### Screenshots (Add Later)
+
 ### Interface	Description
 
 ### Login Screen
@@ -368,11 +372,20 @@ Add Login (Admin/Clerk roles)
 
 Switch from Access to MySQL
 
-### Author
+### Authors
+| # | NAME	| REG. NUMBER |
+|------|-----------|----------|
+| 1. ETOMET PATRICK | VU-BBC-2411-1019-DAY |
+| 2. ISAAC VICTOR  | VU-DIT-2411-1595-DAY |
+| 3. WALIGO SALIM | VU-DIT-2411-0215-DAy |
+| 4. NAMATOVU HOPE | VU-DIT-2411-0047-DAY |
+| 5. TUKEI MARK | VU-BIT-2411-0565-DAY |
 
-Developer: Patrick Etomet
-🎓 Victoria University – Faculty of Computing
-📅 October 2025
+Victoria University – Faculty of Computing
+
+### October 2025
+
+---
 
 ### License
 MIT License © 2025 Patrick Etomet
@@ -382,5 +395,5 @@ Permission is granted for educational and academic use only.
 
 🔗 https://github.com/etopat/ExhibitionRegistrationSystem_VU
 
-💡 Tip: Keep your .accdb file and /images directory inside the same project folder to ensure portability.
+# Tip: Keep your .accdb file and /images directory inside the same project folder to ensure portability.
 
