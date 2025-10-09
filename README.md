@@ -7,12 +7,16 @@ This system automates participant registration, image handling, and table printi
 
 ## Key Features
 
-✅ **Tabbed Pane Interface** – Separate tabs for registration and participant table.  
-✅ **CRUD Support** – Register, Search, Update, Delete participants in Access DB.  
-✅ **Image Upload** – Upload and rename images to match participant Registration ID.  
-✅ **Real-Time Table View** – Auto-refreshes after any operation.  
-✅ **Print Function** – Print participant list directly from JTable.  
-✅ **Data Validation** – Prevents duplicates, invalid emails, and empty fields.  
+**Login Authentication** – Restricts access to authorized users only 
+**Tabbed Pane Interface** – Two main Tabs.
+   - *Registration Form* – Add and edit participant details  
+   - *Records Table* – View all participants and print reports 
+**CRUD Support** – Register, Search, Update, Delete participants in Access DB.  
+**Image Upload** – Upload and rename images to match participant Registration ID.
+**Search Function** – Retrieve participant data by Registration ID 
+**Real-Time Table View** – Auto-refreshes after any operation.  
+**Print Function** – Print participant list directly from JTable.  
+**Data Validation** – Prevents duplicates, invalid emails, and empty fields.  
 
 ---
 
@@ -49,31 +53,106 @@ ExhibitionRegistration/
 						├── VUE_Exhibition.accdb # Access Database	
 						
 						├── images/ # Uploaded Participant Images
-						
-						├── DBConnection.java # UCanAccess Database Connection
-						
+												
 						├── README.md # Project Documentation
 
+
+
+---
+
+## Database Design
+
+The system requires two main tables:  
+1️⃣ `users` – for login authentication  
+2️⃣ `participants` – for storing exhibition participant details  
+
+### Table: `users`
+| Column Name | Data Type | Description |
+|--------------|------------|-------------|
+| userID | AUTONUMBER / INT (PK) | Unique user identifier |
+| username | VARCHAR(50) | Login username |
+| password | VARCHAR(50) | Login password |
+| role | VARCHAR(20) | Optional (e.g., “admin”, “organizer”) |
+
+**Sample Data:**
+` `sql`
+INSERT INTO users (username, password, role)
+VALUES
+('admin', '12345', 'Administrator'),
+('Patrick', '1234', 'Administrator'),
+('Salim', '1234', 'Lecturer'),
+('Hope', '1234', 'Guest'); `
+
+Table: participants
+| Column Name	| Data Type	| Description |
+|--------------|------------|-------------|
+| regID	| VARCHAR(10) (PK)	| Unique registration ID (e.g., REG001) |
+| fullName	| VARCHAR(100)	| Participant’s full name |
+| department	| VARCHAR(100)	| University department |
+| partner	| VARCHAR(100)	| Dancing partner’s name |
+| contact	| VARCHAR(20)	| Phone number |
+| email	| VARCHAR(100)	| Email address |
+| imagePath	| VARCHAR(255)	| File path to participant’s ID image |
+
+Sample Data:
+` `sql`
+INSERT INTO participants (regID, fullName, department, partner, contact, email, imagePath)
+VALUES
+('REG001', 'Mike Okello', 'HS', 'Joy', '94802470927', 'mike@example.com', 'src\main\java\vu\exhibitionRegn\images\REG001.png'),
+('REG002', 'John', 'IT', 'N/A', '099876554', 'john@gmail.com', 'src\main\java\vu\exhibitionRegn\images\REG002.png');`
+
+## How It Works
+
+**1 Login Form** – User enters username and password.
+
+	Credentials are validated against the users table.
+
+	Successful login opens the main window; invalid login shows an error.
+
+**2️ Main Interface** – Contains two tabs:
+
+	Registration Tab – Add, edit, or delete participant records.
+
+	Records Tab – View all participants in a table and print reports.
+
+**3️ Database Layer** – Handles all SQL operations using prepared statements for security.
+
+**4️ Validation** – Ensures no empty fields, valid email format, and unique IDs.
+
+## How to Run
+
+**Clone the repository:**
+
+git clone https://github.com/etopat/ExhibitionRegistration_VU.git
+
+
+Open in NetBeans or IntelliJ IDEA.
+
+Ensure Maven dependencies are downloaded.
+
+Create the database tables using the SQL scripts above.
+
+Run ExhibitionRegn.java as the main entry point.
 
 ---
 
 ## Setup & Configuration
 
-### 1️⃣ Prerequisites
+### 1️ Prerequisites
 Install:
 - Java JDK 24+
 - Apache NetBeans 27
 - Microsoft Access
 - UCanAccess Driver (ucanaccess.jar, jackcess.jar, commons-lang.jar, etc.)
 
-### 2️⃣ Database Path Setup
+### 2️ Database Path Setup
 In **DBConnection.java**, set your database connection as:
 
 String url = "jdbc:ucanaccess://C:/Users/Dell/Documents/NetBeansProjects/ExhibitionRegistration/src/main/java/vu/ExhibitionRegn/VUE_Exhibition.accdb";
 
 	Ensure that the slashes / are forward slashes in Java file paths.
 
-### 🔹 JDBC Connection URL
+### JDBC Connection URL
 In Java, connection URLs for UCanAccess take this format:
 
 String url = "jdbc:ucanaccess://<absolute_path_to_database>";
@@ -82,7 +161,7 @@ For this project:
 String url = "jdbc:ucanaccess://C:/Users/Dell/Documents/NetBeansProjects/ExhibitionRegistration/src/main/java/vu/ExhibitionRegn/VUE_Exhibition.accdb";
 
 
-### 3️⃣ Adding Libraries in NetBeans
+### 3️ Adding Libraries in NetBeans
 
 ### Option 1: Manual Dependency Setup (Classic Method)
 
@@ -156,11 +235,12 @@ Insert the following <dependencies> section:
         <artifactId>commons-logging</artifactId>
         <version>1.2</version>
     </dependency>
-
-    <dependency>
-        <groupId>hsqldb</groupId>
+	
+	<dependency>
+        <groupId>org.hsqldb</groupId>
         <artifactId>hsqldb</artifactId>
-        <version>2.5.1</version>
+        <version>2.7.2</version>
+        <scope>runtime</scope>
     </dependency>
 </dependencies>
 
@@ -185,6 +265,8 @@ Tab	Description
 Registration Form	Capture details, validate inputs, upload ID image
 Participants Table	Displays all records with print and refresh options
 
+
+
 ### Sample Use Case
 
 1️⃣ Open app
@@ -194,24 +276,72 @@ Participants Table	Displays all records with print and refresh options
 5️⃣ View all records in Table Tab
 6️⃣ Use Print to output table to printer
 
+# Sample Login Credentials
+| Username	| Password	| Role |
+|--------|--------|----------|
+| admin	| admin123	| Administrator |
+| organizer	| vu2025	| Organizer |
+
 ### Screenshots (Add Later)
 ### Interface	Description
+
+### Login Screen
+
+![Login Screen](Screenshots/Login-screen.png)
+
+### Users Table (Login Information)
+
+![Users Table](Screenshots/User-table.png)
+
+### Greeting on Login
+
+![Welcome Message](Screenshots/Welcome-on-login.png)
 
 ### Registration Form
 
 ![Registration Form](Screenshots/Registration-Form.png)
 
-### Participants Table Tab
+### Registration Validation
 
-![Participants Table](Screenshots/Data-table-tab.png)
+![Registration Validation](Screenshots/Registration-validation.png)
 
 ### Successful Registration Popup
 
 ![Successful Registration Popup](Screenshots/Successful-Registration.png)
 
+### Search Participant
+
+![Search Participant](Screenshots/Search-Participant.png)
+
 ### No Record Found Popup
 
-![No Record Found Popup](Screenshots/No-record-found.png)
+![No Record Found!](Screenshots/No-record-found.png)
+
+### Participants Table Tab
+
+![Participants Table](Screenshots/Data-table-tab.png)
+
+### Print Dialogue Box
+
+![Print DialogueBox](Screenshots/Print-DialogueBox.png)
+
+### Printing in Proogress
+
+![Printing in Progress](Screenshots/Printing-in-progress.png)
+
+### Cancelled Printing Job
+
+![Cancelled Printing!](Screenshots/Cancelled-PrintJob.png)
+
+### Successful Printing Allert
+
+![Success Printing Message](Screenshots/Successful-Printing-Report.png)
+
+### Logout COnfirmation
+
+![Logout Confirmation Allert!](Screenshots/Logout-confirmation.png)
+
+
 
 ### Input Validation
 Field	Validation
