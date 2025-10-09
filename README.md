@@ -300,7 +300,7 @@ Participants Table	Displays all records with print and refresh options
 
 ### Users Table (Login Information)
 
-![Users Table](Screenshots/User-table.png)
+![Users Table](Screenshots/Users-table.png)
 
 ### Greeting on Login
 
