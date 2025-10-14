@@ -23,9 +23,17 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 public class ExhibitionRegn extends javax.swing.JFrame {
     
      // =================== GLOBAL VARIABLES =====================
-    private static final String DB_URL = "jdbc:ucanaccess://"
-            + "C:\\Users\\Dell\\Documents\\NetBeansProjects\\ExhibitionRegistration\\"
-            + "src\\main\\java\\vu\\ExhibitionRegn\\VUE_Exhibition.accdb";
+     // Get the current directory where the program is running
+    static String currentDir = System.getProperty("user.dir");
+
+    // Build a relative path to the Access database in the same package
+    static String dbPath = currentDir + File.separator + "src" + File.separator + "main" 
+            + File.separator + "java" + File.separator + "vu" 
+            + File.separator + "ExhibitionRegn" + File.separator + "VUE_Exhibition.accdb";
+
+    // Connection string for UCanAccess
+    public static String DB_URL = "jdbc:ucanaccess://" + dbPath;
+    
     private Connection conn;
     private String loggedUser;
     private String role;
@@ -44,6 +52,7 @@ public class ExhibitionRegn extends javax.swing.JFrame {
 
         setTitle("Exhibition Registration System - Logged in as: " + username + " (" + userRole + ")");
         
+        txtRegID.setText(generateNextRegID());
     }
     
      // =================== DATABASE CONNECTION =====================
@@ -55,69 +64,136 @@ public class ExhibitionRegn extends javax.swing.JFrame {
         }
     }
     
+    // Auto generating the Next Registration ID
+    private String generateNextRegID() {
+    String nextRegID = "REG001"; // Default for first entry
+        try {
+            String sql = "SELECT MAX(RegistrationID) AS lastID FROM Participants";
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql);
+
+            if (rs.next()) {
+                String lastID = rs.getString("lastID");
+                if (lastID != null && lastID.startsWith("REG")) {
+                    int num = Integer.parseInt(lastID.substring(3)); // extract number part
+                    num++; // increment
+                    nextRegID = String.format("REG%03d", num); // format to REG###
+                }
+            }
+
+            rs.close();
+            stmt.close();
+        } catch (Exception e) {
+            System.out.println("Error generating RegID: " + e.getMessage());
+        }
+        return nextRegID;
+    }
+
+    
+    // =================== INPUT VALIDATION METHOD =====================
+    private boolean validateInputs(String regID, String name, String dept,
+                                   String partner, String phone, String email, boolean isUpdate) {
+
+        // Check for empty fields
+        if (regID.isEmpty() || name.isEmpty() || dept.isEmpty() || partner.isEmpty()
+                || phone.isEmpty() || email.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "All fields are required!");
+            return false;
+        }
+
+        // Registration ID format (e.g., REG001) – only for new registrations or when updating existing ones
+        if (!regID.matches("^REG\\d{3}$")) {
+            JOptionPane.showMessageDialog(this,
+                    "Invalid Registration ID! It must be in the format REG001, REG002, etc.");
+            return false;
+        }
+
+        // Phone number validation (only digits, 7–15 digits)
+        if (!phone.matches("^\\d{7,15}$")) {
+            JOptionPane.showMessageDialog(this,
+                    "Invalid Phone Number! Enter digits only (7–15 numbers).");
+            return false;
+        }
+
+        // Email format validation
+        if (!email.matches("^[\\w.-]+@[\\w.-]+\\.[A-Za-z]{2,6}$")) {
+            JOptionPane.showMessageDialog(this,
+                    "Invalid Email Format! Example: name@example.com");
+            return false;
+        }
+
+        return true; // Passed all validations
+    }
+    
+    
     // =================== REGISTER PARTICIPANT =====================
     private void registerParticipant() {
-    try {
-        if (txtRegID.getText().isEmpty() || txtName.getText().isEmpty() ||
-            txtDept.getText().isEmpty() || txtPartner.getText().isEmpty() ||
-            txtContact.getText().isEmpty() || txtEmail.getText().isEmpty() ||
-            selectedImagePath == null) {
-            JOptionPane.showMessageDialog(this, "All fields including image are required!");
-            return;
-        }
+        try {
+            String regID = txtRegID.getText().trim();
+            String name = txtName.getText().trim();
+            String dept = txtDept.getText().trim();
+            String partner = txtPartner.getText().trim();
+            String phone = txtContact.getText().trim();
+            String email = txtEmail.getText().trim();
 
-        // Rename image to RegistrationID only (with extension preserved)
-        String regID = txtRegID.getText().trim();
-        File srcFile = new File(selectedImagePath);
+            // Validate inputs first
+            if (!validateInputs(regID, name, dept, partner, phone, email, false)) return;
 
-        // Extract extension
-        String ext = "";
-        int i = srcFile.getName().lastIndexOf('.');
-        if (i > 0) {
-            ext = srcFile.getName().substring(i);
-        }
+            if (selectedImagePath == null) {
+                JOptionPane.showMessageDialog(this, "Please select an ID image!");
+                return;
+            }
+            
+            // Validate to avoid the Entering duplicate members with the same Registration ID
+            String checkSQL = "SELECT COUNT(*) FROM Participants WHERE RegistrationID = ?";
+            PreparedStatement checkPs = conn.prepareStatement(checkSQL);
+            checkPs.setString(1, regID);
+            ResultSet rs = checkPs.executeQuery();
+            rs.next();
+            if (rs.getInt(1) > 0) {
+                JOptionPane.showMessageDialog(this,
+                    "Participant with Reg No. " + regID + " already exists!",
+                    "Duplicate Entry", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            rs.close();
+            checkPs.close();
 
-        // Destination folder (relative)
-        File destDir = new File("src/main/java/vu/exhibitionRegn/images");
-        if (!destDir.exists()) destDir.mkdirs();
 
-        // Destination file with renamed image
-        File destFile = new File(destDir, regID + ext);
+            // Rename image and store
+            File srcFile = new File(selectedImagePath);
+            String ext = srcFile.getName().substring(srcFile.getName().lastIndexOf('.'));
+            File destDir = new File("src/main/java/vu/ExhibitionRegn/images");
+            if (!destDir.exists()) destDir.mkdirs();
+            File destFile = new File(destDir, regID + ext);
+            Files.copy(srcFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-        // Copy image to destination folder (overwrite if exists)
-        Files.copy(srcFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            String relativePath = "src\\main\\java\\vu\\ExhibitionRegn\\images\\" + regID + ext;
 
-        // Store relative path (instead of absolute)
-        String relativePath = "src\\main\\java\\vu\\exhibitionRegn\\images\\" + regID + ext;
+            String sql = "INSERT INTO Participants (RegistrationID, ParticipantName, Department, " +
+                         "DancePartner, ContactNumber, Email, IDImagePath) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, regID);
+            ps.setString(2, name);
+            ps.setString(3, dept);
+            ps.setString(4, partner);
+            ps.setString(5, phone);
+            ps.setString(6, email);
+            ps.setString(7, relativePath);
 
-        // Insert into DB
-        String sql = "INSERT INTO Participants (RegistrationID, ParticipantName, Department, " +
-                     "DancePartner, ContactNumber, Email, IDImagePath) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            ps.executeUpdate();
+            JOptionPane.showMessageDialog(this, "Participant Registered Successfully!");
+            clearForm();
+            loadParticipantsData();
 
-        PreparedStatement ps = conn.prepareStatement(sql);
-        ps.setString(1, regID);
-        ps.setString(2, txtName.getText().trim());
-        ps.setString(3, txtDept.getText().trim());
-        ps.setString(4, txtPartner.getText().trim());
-        ps.setString(5, txtContact.getText().trim());
-        ps.setString(6, txtEmail.getText().trim());
-        ps.setString(7, relativePath);
-
-        ps.executeUpdate();
-        JOptionPane.showMessageDialog(this, "Participant Registered Successfully!");
-        clearForm();
-
-    } catch (SQLIntegrityConstraintViolationException e) {
-        JOptionPane.showMessageDialog(this,
-            "Participant with Reg No. " + txtRegID.getText().trim() + " is already registered!",
-            "Duplicate Entry", JOptionPane.WARNING_MESSAGE);
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Registration Error: " + e.getMessage());
-        e.printStackTrace();
+        } catch (SQLIntegrityConstraintViolationException e) {
+            JOptionPane.showMessageDialog(this,
+                "Participant with Reg No. " + txtRegID.getText().trim() + " already exists!",
+                "Duplicate Entry", JOptionPane.WARNING_MESSAGE);
+        } catch (HeadlessException | IOException | SQLException e) {
+            JOptionPane.showMessageDialog(this, "Registration Error: " + e.getMessage());
+        }   
     }
-        loadParticipantsData();
-    }
-
 
 
     // Search Participant
@@ -143,100 +219,91 @@ public class ExhibitionRegn extends javax.swing.JFrame {
                     lblImage.setIcon(new ImageIcon(scaled));
             } else {
                 JOptionPane.showMessageDialog(this, "No Record Found!");
+                clearForm();
             }
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Search Error: " + e.getMessage());
         }
+        
     }
 
     // =================== UPDATE PARTICIPANT =====================
-    private String saveImageAsRegId(String regId, String sourcePath) throws IOException {
-        if (sourcePath == null || sourcePath.trim().isEmpty()) return null;
-        File src = new File(sourcePath);
-        if (!src.exists()) return null;
-
-        File dir = new File(IMAGE_DIR);
-        if (!dir.exists()) dir.mkdirs();
-
-        String ext = "";
-        int i = src.getName().lastIndexOf('.');
-        if (i > 0) ext = src.getName().substring(i);
-
-        File dest = new File(dir, regId + ext);
-        Files.copy(src.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        return dest.getAbsolutePath();
-    }
-
     private void updateParticipant() {
-    try {
-        String regID = txtRegID.getText().trim();
-        if (regID.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter a Registration ID to update!");
-            return;
-        }
+        try {
+            String regID = txtRegID.getText().trim();
+            String name = txtName.getText().trim();
+            String dept = txtDept.getText().trim();
+            String partner = txtPartner.getText().trim();
+            String phone = txtContact.getText().trim();
+            String email = txtEmail.getText().trim();
 
-        // Check if participant exists
-        String checkSql = "SELECT * FROM Participants WHERE RegistrationID = ?";
-        PreparedStatement checkPs = conn.prepareStatement(checkSql);
-        checkPs.setString(1, regID);
-        ResultSet rs = checkPs.executeQuery();
+            if (!validateInputs(regID, name, dept, partner, phone, email, true)) return;
 
-        if (!rs.next()) {
-            JOptionPane.showMessageDialog(this, "No participant found with Reg No: " + regID);
-            return;
-        }
+            // Check if participant exists
+            String checkSql = "SELECT IDImagePath FROM Participants WHERE RegistrationID = ?";
+            PreparedStatement checkPs = conn.prepareStatement(checkSql);
+            checkPs.setString(1, regID);
+            ResultSet rs = checkPs.executeQuery();
 
-        // Handle image update (if a new one is selected)
-        String relativeImagePath = rs.getString("IDImagePath"); // keep old one if not changed
-        if (selectedImagePath != null) {
-            File srcFile = new File(selectedImagePath);
-            String ext = "";
+            if (!rs.next()) {
+                JOptionPane.showMessageDialog(this, "No participant found with Reg No: " + regID);
+                rs.close();
+                checkPs.close();
+                return;
+            }
 
-            int i = srcFile.getName().lastIndexOf('.');
-            if (i > 0) ext = srcFile.getName().substring(i);
+            // Get old image path before closing ResultSet
+            String relativeImagePath = rs.getString("IDImagePath");
 
-            // Define relative folder path
-            String relativeFolder = "src\\main\\java\\vu\\exhibitionRegn\\images";
-            File destDir = new File(relativeFolder);
-            if (!destDir.exists()) destDir.mkdirs();
+            // Always close the previous resources before proceeding
+            rs.close();
+            checkPs.close();
 
-            // Copy and rename image file to match regID
-            File destFile = new File(destDir, regID + ext);
-            Files.copy(srcFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            // Handle image update
+            if (selectedImagePath != null) {
+                File srcFile = new File(selectedImagePath);
+                String ext = srcFile.getName().substring(srcFile.getName().lastIndexOf('.'));
+                File destDir = new File("src/main/java/vu/ExhibitionRegn/images");
+                if (!destDir.exists()) destDir.mkdirs();
+                File destFile = new File(destDir, regID + ext);
+                Files.copy(srcFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                relativeImagePath = "src\\main\\java\\vu\\ExhibitionRegn\\images\\" + regID + ext;
+            }
 
-            // Store only the relative path in the database
-            relativeImagePath = relativeFolder + "\\" + regID + ext;
-        }
+            // Execute the UPDATE
+            String updateSql = "UPDATE Participants SET ParticipantName=?, Department=?, DancePartner=?, "
+                    + "ContactNumber=?, Email=?, IDImagePath=? WHERE RegistrationID=?";
+            PreparedStatement ps = conn.prepareStatement(updateSql);
+            ps.setString(1, name);
+            ps.setString(2, dept);
+            ps.setString(3, partner);
+            ps.setString(4, phone);
+            ps.setString(5, email);
+            ps.setString(6, relativeImagePath);
+            ps.setString(7, regID);
 
-        // Update query
-        String updateSql = "UPDATE Participants SET ParticipantName=?, Department=?, DancePartner=?, "
-                + "ContactNumber=?, Email=?, IDImagePath=? WHERE RegistrationID=?";
-        PreparedStatement ps = conn.prepareStatement(updateSql);
+            int rows = ps.executeUpdate();
+            ps.close();
 
-        ps.setString(1, txtName.getText());
-        ps.setString(2, txtDept.getText());
-        ps.setString(3, txtPartner.getText());
-        ps.setString(4, txtContact.getText());
-        ps.setString(5, txtEmail.getText());
-        ps.setString(6, relativeImagePath);
-        ps.setString(7, regID);
+            if (rows > 0) {
+                JOptionPane.showMessageDialog(this, "Participant details updated successfully!");
+                clearForm();
+            } else {
+                JOptionPane.showMessageDialog(this, "Update failed. Please try again.");
+            }
 
-        int rows = ps.executeUpdate();
-
-        if (rows > 0) {
-            JOptionPane.showMessageDialog(this, "Participant details updated successfully!");
-            clearForm();
             loadParticipantsData();
-        } else {
-            JOptionPane.showMessageDialog(this, "Update failed. Please try again.");
-        }
 
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "SQL Error: " + e.getMessage());
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Update Error: " + e.getMessage());
         }
-        loadParticipantsData();
     }
+
+
     // ------------------ End of Update section ------------------
+    
 
     // Delete Participant from Participants  and Associated Image from Images folder
     private void deleteParticipant() {
@@ -280,7 +347,6 @@ public class ExhibitionRegn extends javax.swing.JFrame {
 
     // Clear Form
     private void clearForm() {
-        txtRegID.setText("");
         txtName.setText("");
         txtDept.setText("");
         txtPartner.setText("");
@@ -288,6 +354,9 @@ public class ExhibitionRegn extends javax.swing.JFrame {
         txtEmail.setText("");
         lblImage.setIcon(null);
         selectedImagePath = null;
+        
+        // Generate next RegID automatically
+    txtRegID.setText(generateNextRegID());
     }
 
     // Upload Image
@@ -399,7 +468,7 @@ public class ExhibitionRegn extends javax.swing.JFrame {
         jPanel1.add(lbl1, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 50, 120, -1));
 
         txtRegID.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        txtRegID.setToolTipText("Enter Participant's ID.");
+        txtRegID.setToolTipText("Participant's ID.");
         txtRegID.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 txtRegIDActionPerformed(evt);
@@ -731,33 +800,27 @@ public class ExhibitionRegn extends javax.swing.JFrame {
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 30, 10, 30); // top, left, bottom, right padding
-        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         // Username Label
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.LINE_END;
         add(new JLabel("Username:"), gbc);
 
         // Username Field
         txtUser = new JTextField(15);
         gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        gbc.anchor = GridBagConstraints.LINE_START;
+        gbc.gridy = 0;
         add(txtUser, gbc);
 
         // Password Label
         gbc.gridx = 0;
         gbc.gridy = 1;
-        gbc.weightx = 0.3;
-        gbc.anchor = GridBagConstraints.LINE_END;
         add(new JLabel("Password:"), gbc);
 
         // Password Field
         txtPass = new JPasswordField(15);
         gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        gbc.anchor = GridBagConstraints.LINE_START;
+        gbc.gridy = 1;
         add(txtPass, gbc);
 
         // Buttons Panel
@@ -772,7 +835,6 @@ public class ExhibitionRegn extends javax.swing.JFrame {
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.gridwidth = 2;
-        gbc.anchor = GridBagConstraints.CENTER;
         add(buttonPanel, gbc);
 
         // Add actions
@@ -786,8 +848,16 @@ public class ExhibitionRegn extends javax.swing.JFrame {
             String username = txtUser.getText().trim();
             String password = new String(txtPass.getPassword());
 
-            if (username.isEmpty() || password.isEmpty()) {
+            if (username.isEmpty() && password.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Enter username and password!");
+                return;
+            }
+            else if (username.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Enter username!");
+                return;
+            }
+            else if (password.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Enter password!");
                 return;
             }
 
